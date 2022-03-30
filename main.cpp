@@ -193,10 +193,10 @@ void *render_chunk(void *input)
     pthread_exit(NULL);
 }
 
-void generate(SDL_Renderer *renderer, int width, int height, int depth, double center_x, double center_y, double r)
+void generate(SDL_Renderer *renderer, int width, int height, int depth, double center_x, double center_y, double r, double exposure)
 {
     generate_print(center_x, center_y, r, depth);
-    int n_threads = 16;
+    int n_threads = pow(2, ceil(log2(sqrt(width*height) / 64) / 2.0) * 2);
     int s_threads = sqrt(n_threads);
     pthread_t threads[n_threads];
     settings_t settings[n_threads];
@@ -231,8 +231,9 @@ void generate(SDL_Renderer *renderer, int width, int height, int depth, double c
     for (int c = 0; c < n_threads; c++)
     {
         pthread_join(threads[c], &status);
-        cout << "Thread " << c << ": Done!" << endl;
+        cout << "\rThread " << c << ": Done!";
     }
+    cout << endl;
     for (int c = 0; c < n_threads; c++)
     {
         for (int y = 0; y < settings[c].height; y++)
@@ -240,7 +241,7 @@ void generate(SDL_Renderer *renderer, int width, int height, int depth, double c
             for (int x = 0; x < settings[c].width; x++)
             {
                 int div = settings[c].buf[x + y * settings[c].width];
-                rgb out = (div > settings[c].depth-1) ? RGB_BLACK : gradient(nova, MIN(1, EXPOSURE*div/(double)settings[c].depth));
+                rgb out = (div > settings[c].depth-1) ? RGB_BLACK : gradient(nova, MIN(1, exposure*div/(double)settings[c].depth));
 
                 SDL_SetRenderDrawColor(renderer, out.r*255, out.g*255, out.b*255, SDL_ALPHA_OPAQUE);
                 SDL_RenderDrawPoint(renderer, settings[c].screen_x + x, settings[c].screen_y + y);
@@ -262,7 +263,7 @@ int SDL_setup(int width, int height, SDL_Window **window, SDL_Renderer **rendere
     *window = SDL_CreateWindow("Mandel",
                         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                         width, height,
-                        0);
+                        SDL_WINDOW_HIDDEN);
     if (*window == NULL)
     {
         cout << "Window failed to create\n";
@@ -283,6 +284,7 @@ int main(int argc, char *argv[])
     int width = SC_WIDTH;
     int height = SC_HEIGHT;
     int depth = REC_DPTH;
+    double exposure = EXPOSURE;
     if (argc < 4)
     {
         cout << "Requires x, y and r values:\n\t";
@@ -298,6 +300,10 @@ int main(int argc, char *argv[])
     if (argc > 6)
     {
         depth = stoi(argv[6]);
+    }
+    if (argc > 7)
+    {
+        exposure = stod(argv[7]);
     }
     cout << "Starting mandel\n";
     cout << "Width: " << width << endl;
@@ -315,9 +321,9 @@ int main(int argc, char *argv[])
     SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
     SDL_RenderClear(renderer);
 
-    generate(renderer, width, height, depth, stod(argv[1]), stod(argv[2]), stod(argv[3])); 
+    generate(renderer, width, height, depth, stod(argv[1]), stod(argv[2]), stod(argv[3]), exposure); 
 
-    SDL_RenderPresent(renderer);
+    // SDL_RenderPresent(renderer);
     cout << "Rendered all\n";
     SDL_QueryTexture(texture, NULL, NULL, &width, &height);
     SDL_Surface* surface = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0);
@@ -337,21 +343,22 @@ int main(int argc, char *argv[])
     filename += ":";
     filename += to_string(now->tm_sec);
     IMG_SavePNG(surface, filename.c_str());
-    while (!quit)
-    {
-        SDL_Event event;
-        
-        while (SDL_PollEvent(&event))
-        {
-            switch(event.type)
-            {
-                case SDL_QUIT:
-                    quit = SDL_TRUE;
-                    break;
-            }
-        }
-        SDL_Delay(10);
-    }
+    cout << "Saved image!" << endl;
+    // while (!quit)
+    // {
+    //     SDL_Event event;
+    //     
+    //     while (SDL_PollEvent(&event))
+    //     {
+    //         switch(event.type)
+    //         {
+    //             case SDL_QUIT:
+    //                 quit = SDL_TRUE;
+    //                 break;
+    //         }
+    //     }
+    //     SDL_Delay(10);
+    // }
     if (renderer) {
         SDL_DestroyRenderer(renderer);
     }
