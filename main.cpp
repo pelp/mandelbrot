@@ -287,9 +287,16 @@ int main(int argc, char *argv[])
     double exposure = EXPOSURE;
     if (argc < 4)
     {
-        cout << "Requires x, y and r values:\n\t";
+        cout << "Requires x, y and r values:\n";
+        cout << "x - center x coordinate\n"
+                "y - center y coordinate\n"
+                "r - side length of the window\n"
+                "w - output width (default: 256)\n"
+                "h - output height (default: 256)\n"
+                "n - number of iterations (default: 128)\n"
+                "e - \"exposure\"; how much is the output scaled by (default: 1)\n\t";
         cout << argv[0];
-        cout << " <x> <y> <r>\n";
+        cout << " <x> <y> <r> [w] [h] [n] [e]\n";
         return -1;
     }
     if (argc > 5)
